@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Levels{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <h2>Current Stock Levels</h2>
+    <a href="{{ url_for('salesman_dashboard') }}" class="btn">🔙 Back to Sales</a>
+</div>
+
+<div style="margin-bottom: 20px;">
+    <input type="text" id="searchBox" placeholder="Search products by ID or name..." 
+           style="width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+    <div id="searchResults" style="margin-top: 10px;"></div>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Product Name</th>
+            <th>Description</th>
+            <th>Available Quantity</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in stock_data %}
+        <tr>
+            <td><strong>{{ item[0] }}</strong></td>
+            <td>{{ item[1] or 'No description' }}</td>
+            <td>{{ item[2] }}</td>
+            <td>
+                {% if item[2] == 0 %}
+                    <span style="color: red; font-weight: bold;">OUT OF STOCK</span>
+                {% elif item[2] < 10 %}
+                    <span style="color: orange; font-weight: bold;">LOW STOCK</span>
+                {% else %}
+                    <span style="color: green;">Available</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+let searchTimeout;
+document.getElementById('searchBox').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+        document.getElementById('searchResults').innerHTML = '';
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = '';
+                if (data.length > 0) {
+                    html = '<div style="background: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #ddd;"><h4>Search Results:</h4>';
+                    data.forEach(product => {
+                        let status = 'Available';
+                        let statusColor = 'green';
+                        if (product.stock === 0) {
+                            status = 'OUT OF STOCK';
+                            statusColor = 'red';
+                        } else if (product.stock < 10) {
+                            status = 'LOW STOCK';
+                            statusColor = 'orange';
+                        }
+                        html += `<div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px; background: white;">
+                                   <strong>ID: ${product.id} - ${product.name}</strong><br>
+                                   <small>${product.description}</small><br>
+                                   Stock: ${product.stock} | <span style="color: ${statusColor}; font-weight: bold;">${status}</span>
+                                 </div>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html = '<div style="background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeaa7;">No products found</div>';
+                }
+                document.getElementById('searchResults').innerHTML = html;
+            });
+    }, 300);
+});
+</script>
+{% endblock %}

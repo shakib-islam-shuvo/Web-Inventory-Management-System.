@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Current Stock{% endblock %}
+
+{% block content %}
+<h2>Current Stock Levels</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Product Name</th>
+            <th>Available Quantity</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in stock_data %}
+        <tr>
+            <td>{{ item[0] }}</td>
+            <td>{{ item[1] }}</td>
+            <td>
+                {% if item[1] < 10 %}
+                    <span style="color: red; font-weight: bold;">LOW STOCK</span>
+                {% elif item[1] == 0 %}
+                    <span style="color: red; font-weight: bold;">OUT OF STOCK</span>
+                {% else %}
+                    <span style="color: green;">Available</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 20px;">
+    <a href="{{ url_for('assistant_dashboard') }}" class="btn">Back to Dashboard</a>
+</div>
+{% endblock %}

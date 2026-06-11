@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}All Products{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>📦 All Products</h2>
+    <a href="{{ url_for('owner_dashboard') }}" class="btn">🔙 Back to Dashboard</a>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Product Name</th>
+            <th>Description</th>
+            <th>Cost Price</th>
+            <th>Selling Price (MRP)</th>
+            <th>Current Stock</th>
+            <th>Inventory Value</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr>
+            <td>{{ product[0] }}</td>
+            <td><strong>{{ product[1] }}</strong></td>
+            <td>{{ product[2] or 'No description' }}</td>
+            <td>৳{{ "%.2f"|format(product[3]) }}</td>
+            <td>৳{{ "%.2f"|format(product[4]) }}</td>
+            <td>{{ product[5] }}</td>
+            <td>৳{{ "%.2f"|format(product[5] * product[3]) }}</td>
+            <td>
+                {% if product[5] == 0 %}
+                    <span style="color: red; font-weight: bold;">OUT OF STOCK</span>
+                {% elif product[5] < 10 %}
+                    <span style="color: orange; font-weight: bold;">LOW STOCK</span>
+                {% else %}
+                    <span style="color: green;">Available</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if product[3] == 0 or product[4] == 0 %}
+                    <button onclick="showPriceForm({{ product[0] }}, '{{ product[1] }}')" class="btn" style="padding: 5px 10px; font-size: 12px;">Set Prices</button>
+                {% else %}
+                    <button onclick="showPriceForm({{ product[0] }}, '{{ product[1] }}')" class="btn" style="padding: 5px 10px; font-size: 12px; background: #6c757d;">Update Prices</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+    <strong>Products Summary:</strong>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 10px;">
+        <div>Total Products: <strong>{{ products|length }}</strong></div>
+        <div>In Stock: <strong style="color: #28a745;">{{ products|selectattr(5, '>', 0)|list|length }}</strong></div>
+        <div>Low Stock: <strong style="color: #ffc107;">{{ products|selectattr(5, '<', 10)|selectattr(5, '>', 0)|list|length }}</strong></div>
+        <div>Out of Stock: <strong style="color: #dc3545;">{{ products|selectattr(5, '==', 0)|list|length }}</strong></div>
+    </div>
+</div>
+
+<script>
+// Price update form
+function showPriceForm(productId, productName) {
+    const cost = prompt(`Enter cost price for ${productName}:`);
+    if (cost && !isNaN(cost)) {
+        const selling = prompt(`Enter selling price (MRP) for ${productName}:`);
+        if (selling && !isNaN(selling)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/owner/update_prices';
+            form.innerHTML = `
+                <input type="hidden" name="product_id" value="${productId}">
+                <input type="hidden" name="cost_price" value="${cost}">
+                <input type="hidden" name="selling_price" value="${selling}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+</script>
+{% endblock %}

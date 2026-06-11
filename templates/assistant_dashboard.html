@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Assistant Dashboard{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin: 50px 0;">
+    <h2>Assistant Panel</h2>
+    <p>Choose an action:</p>
+    
+    <div style="display: flex; justify-content: center; gap: 30px; margin-top: 40px;">
+        <a href="{{ url_for('record_sale') }}" class="btn" style="padding: 30px 40px; font-size: 18px;">
+            📝 Record Sale
+        </a>
+        
+        <a href="{{ url_for('view_stock') }}" class="btn" style="padding: 30px 40px; font-size: 18px;">
+            📦 View Stock
+        </a>
+    </div>
+</div>
+{% endblock %}

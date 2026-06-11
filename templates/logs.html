@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Logs{% endblock %}
+
+{% block content %}
+<h2>All Transaction Logs</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Date/Time</th>
+            <th>Product</th>
+            <th>Type</th>
+            <th>Quantity Change</th>
+            <th>Cost Price</th>
+            <th>Selling Price</th>
+            <th>Recorded By</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log[6].strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>{{ log[0] }}</td>
+            <td>
+                {% if log[4] == 'sale' %}
+                    <span style="color: red;">SALE</span>
+                {% else %}
+                    <span style="color: green;">RESTOCK</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if log[1] > 0 %}
+                    <span style="color: green;">+{{ log[1] }}</span>
+                {% else %}
+                    <span style="color: red;">{{ log[1] }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if log[2] %}
+                    ৳{{ "%.2f"|format(log[2]) }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>
+                {% if log[3] %}
+                    ৳{{ "%.2f"|format(log[3]) }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ log[5] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 20px;">
+    <a href="{{ url_for('owner_dashboard') }}" class="btn">Back to Dashboard</a>
+</div>
+{% endblock %}

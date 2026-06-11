@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Sales Report{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('owner_dashboard') }}" class="btn">← Back to Dashboard</a>
+</div>
+
+<h2>Weekly Sales Report</h2>
+
+{% set ns = namespace(total_sales=0, total_profit=0, total_items=0) %}
+
+{% for log in logs %}
+    {% set quantity = -log[1] %}
+    {% set ns.total_items = ns.total_items + quantity %}
+    {% set sale_amount = quantity * log[3] %}
+    {% set cost_amount = quantity * log[2] %}
+    {% set ns.total_sales = ns.total_sales + sale_amount %}
+    {% set ns.total_profit = ns.total_profit + (sale_amount - cost_amount) %}
+{% endfor %}
+
+<div class="stats" style="margin-bottom: 30px;">
+    <div class="stat-card">
+        <div class="stat-value">৳{{ "%.2f"|format(ns.total_sales) }}</div>
+        <div>Total Sales</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">৳{{ "%.2f"|format(ns.total_profit) }}</div>
+        <div>Total Profit</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ ns.total_items }}</div>
+        <div>Items Sold</div>
+    </div>
+</div>
+
+<h3>Transaction Details</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Cost Price</th>
+            <th>Selling Price</th>
+            <th>Total Sale</th>
+            <th>Profit</th>
+            <th>Sold By</th>
+            <th>Date & Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        {% set quantity = -log[1] %}
+        {% set sale_amount = quantity * log[3] %}
+        {% set cost_amount = quantity * log[2] %}
+        {% set profit = sale_amount - cost_amount %}
+        <tr>
+            <td>{{ log[0] }}</td>
+            <td>{{ quantity }}</td>
+            <td>৳{{ "%.2f"|format(log[2]) }}</td>
+            <td>৳{{ "%.2f"|format(log[3]) }}</td>
+            <td>৳{{ "%.2f"|format(sale_amount) }}</td>
+            <td style="color: {{ 'green' if profit > 0 else 'red' }};">৳{{ "%.2f"|format(profit) }}</td>
+            <td>{{ log[4] }}</td>
+            <td>{{ log[5].strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not logs %}
+<div style="text-align: center; padding: 40px; color: #666;">
+    <h3>No sales recorded in the last 7 days</h3>
+</div>
+{% endif %}
+
+{% endblock %}

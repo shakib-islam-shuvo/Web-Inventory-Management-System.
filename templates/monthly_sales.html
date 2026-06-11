@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Sales Report{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('owner_dashboard') }}" class="btn">← Back to Dashboard</a>
+</div>
+
+<h2>Monthly Sales Report</h2>
+
+{% set ns = namespace(total_sales=0, total_profit=0, total_items=0) %}
+
+{% for log in logs %}
+    {% set quantity = -log[1] %}
+    {% set ns.total_items = ns.total_items + quantity %}
+    {% set sale_amount = quantity * log[3] %}
+    {% set cost_amount = quantity * log[2] %}
+    {% set ns.total_sales = ns.total_sales + sale_amount %}
+    {% set ns.total_profit = ns.total_profit + (sale_amount - cost_amount) %}
+{% endfor %}
+
+<div class="stats" style="margin-bottom: 30px;">
+    <div class="stat-card">
+        <div class="stat-value">৳{{ "%.2f"|format(ns.total_sales) }}</div>
+        <div>Monthly Sales</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">৳{{ "%.2f"|format(ns.total_profit) }}</div>
+        <div>Monthly Profit</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ ns.total_items }}</div>
+        <div>Items Sold</div>
+    </div>
+</div>
+
+<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px;">
+    <h3>Daily Sales Trend (Last 30 Days)</h3>
+    <canvas id="salesChart" width="800" height="400"></canvas>
+</div>
+
+<h3>Monthly Transaction Details</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Cost Price</th>
+            <th>Selling Price</th>
+            <th>Total Sale</th>
+            <th>Profit</th>
+            <th>Sold By</th>
+            <th>Date & Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        {% set quantity = -log[1] %}
+        {% set sale_amount = quantity * log[3] %}
+        {% set cost_amount = quantity * log[2] %}
+        {% set profit = sale_amount - cost_amount %}
+        <tr>
+            <td>{{ log[0] }}</td>
+            <td>{{ quantity }}</td>
+            <td>৳{{ "%.2f"|format(log[2]) }}</td>
+            <td>৳{{ "%.2f"|format(log[3]) }}</td>
+            <td>৳{{ "%.2f"|format(sale_amount) }}</td>
+            <td style="color: {{ 'green' if profit > 0 else 'red' }};">৳{{ "%.2f"|format(profit) }}</td>
+            <td>{{ log[4] }}</td>
+            <td>{{ log[5].strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not logs %}
+<div style="text-align: center; padding: 40px; color: #666;">
+    <h3>No sales recorded this month</h3>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+try {
+    const chartData = {{ chart_data | tojson | safe }};
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    if (!chartData || chartData.length === 0) {
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('No sales data available for the last 30 days', 400, 200);
+    } else {
+        const labels = chartData.map(item => item[0]);
+        const data = chartData.map(item => parseFloat(item[1]) || 0);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Daily Sales (৳)',
+                    data: data,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '৳' + value.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    }
+} catch (error) {
+    console.error('Chart error:', error);
+}
+</script>
+
+{% endblock %}

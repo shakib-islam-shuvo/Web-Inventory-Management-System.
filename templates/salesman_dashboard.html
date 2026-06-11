@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Panel{% endblock %}
+
+{% block content %}
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="margin: 0; font-size: 28px;">💰 Sales Terminal</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Search products and build customer orders</p>
+        </div>
+        <a href="{{ url_for('salesman_stock') }}" class="btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">📦 Stock View</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; min-height: 600px;">
+    <!-- Product Search Section -->
+    <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #333;">🔍 Product Search</h3>
+        </div>
+        <div style="position: relative; max-width: 500px;">
+            <input type="text" id="searchBox" placeholder="Type product name or ID to search..." 
+                   style="width: 100%; padding: 12px 45px 12px 16px; border: 1px solid #e9ecef; border-radius: 8px; font-size: 15px; transition: all 0.3s ease;"
+                   onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0,123,255,0.1)'"
+                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 16px;">🔍</span>
+        </div>
+        <div id="searchResults" style="margin-top: 20px;"></div>
+    </div>
+    
+    <!-- Shopping Cart Section -->
+    <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: sticky; top: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #333;">🛒 Cart</h3>
+            <span id="cartCount" style="background: #007bff; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">0</span>
+        </div>
+        
+        <div id="cartItems" style="min-height: 200px; max-height: 400px; overflow-y: auto;"></div>
+        
+        <div style="border-top: 2px solid #dee2e6; padding-top: 20px; margin-top: 20px;">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">Discount %:</label>
+                <input type="number" id="discountPercent" min="0" max="50" value="0" placeholder="0" 
+                       style="width: 100%; padding: 8px; border: 1px solid #dee2e6; border-radius: 6px; text-align: center;"
+                       onchange="updateCartDisplay()">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; color: #666;">
+                    <span>Subtotal:</span>
+                    <span id="cartSubtotal">৳0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: #dc3545;" id="discountRow" style="display: none;">
+                    <span>Discount:</span>
+                    <span id="cartDiscount">-৳0.00</span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-top: 1px solid #dee2e6; padding-top: 10px;">
+                <span style="font-size: 20px; font-weight: bold; color: #333;">Total:</span>
+                <span id="cartTotal" style="font-size: 24px; font-weight: bold; color: #28a745;">৳0.00</span>
+            </div>
+            <button onclick="processCheckout()" class="btn btn-success" 
+                    style="width: 100%; padding: 15px; font-size: 16px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease;" 
+                    disabled id="checkoutBtn">
+                💳 Complete Sale
+            </button>
+            <button onclick="clearCart()" class="btn" 
+                    style="width: 100%; padding: 10px; font-size: 14px; margin-top: 10px; background: #6c757d; color: white; border-radius: 8px;" 
+                    id="clearBtn" disabled>
+                🗑️ Clear Cart
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let cart = [];
+let searchTimeout;
+
+// Search functionality
+document.getElementById('searchBox').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+        document.getElementById('searchResults').innerHTML = '';
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = '';
+                if (data.length > 0) {
+                    data.forEach(product => {
+                        if (product.stock > 0 && product.price > 0) {
+                            html += `<div style="border: 1px solid #e9ecef; padding: 20px; margin: 15px 0; border-radius: 12px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;" onmouseover="this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'">
+                                       <div style="display: flex; justify-content: space-between; align-items: center;">
+                                         <div style="flex: 1;">
+                                           <h4 style="margin: 0 0 5px 0; color: #333;">${product.name}</h4>
+                                           <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">ID: ${product.id} | ${product.description}</p>
+                                           <div style="display: flex; gap: 15px;">
+                                             <span style="background: #e8f5e8; color: #2d5a2d; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">Stock: ${product.stock}</span>
+                                             <span style="background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">MRP: ৳${product.price.toFixed(2)}</span>
+                                           </div>
+                                         </div>
+                                         <div style="display: flex; align-items: center; gap: 12px; margin-left: 20px;">
+                                           <input type="number" id="qty_${product.id}" min="1" max="${product.stock}" value="1" style="width: 70px; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; text-align: center; font-weight: 600;">
+                                           <button onclick="addToCart(${product.id}, '${product.name}', ${product.price}, ${product.stock})" class="btn" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease;" onmouseover="this.style.background='#218838'" onmouseout="this.style.background='#28a745'">
+                                             ➕ Add to Cart
+                                           </button>
+                                         </div>
+                                       </div>
+                                     </div>`;
+                        }
+                    });
+                } else {
+                    html = '<div style="background: #fff3cd; padding: 15px; border-radius: 8px; text-align: center;">No products found</div>';
+                }
+                document.getElementById('searchResults').innerHTML = html;
+            });
+    }, 300);
+});
+
+// Add to cart
+function addToCart(id, name, price, maxStock) {
+    const qtyInput = document.getElementById(`qty_${id}`);
+    const quantity = parseInt(qtyInput.value) || 1;
+    
+    // Check if item already in cart
+    const existingItem = cart.find(item => item.id === id);
+    if (existingItem) {
+        const newQty = existingItem.quantity + quantity;
+        if (newQty <= maxStock) {
+            existingItem.quantity = newQty;
+        } else {
+            alert(`Cannot add more. Maximum stock: ${maxStock}`);
+            return;
+        }
+    } else {
+        cart.push({ id, name, price, quantity, maxStock });
+    }
+    
+    updateCartDisplay();
+    qtyInput.value = 1;
+}
+
+// Remove from cart
+function removeFromCart(id) {
+    cart = cart.filter(item => item.id !== id);
+    updateCartDisplay();
+}
+
+// Update quantity in cart
+function updateCartQuantity(id, newQty) {
+    const item = cart.find(item => item.id === id);
+    if (item) {
+        if (newQty <= 0) {
+            removeFromCart(id);
+        } else if (newQty <= item.maxStock) {
+            item.quantity = newQty;
+            updateCartDisplay();
+        } else {
+            alert(`Maximum stock: ${item.maxStock}`);
+        }
+    }
+}
+
+// Clear cart
+function clearCart() {
+    cart = [];
+    updateCartDisplay();
+}
+
+// Update cart display
+function updateCartDisplay() {
+    const cartItemsDiv = document.getElementById('cartItems');
+    const cartTotalSpan = document.getElementById('cartTotal');
+    const cartSubtotalSpan = document.getElementById('cartSubtotal');
+    const cartDiscountSpan = document.getElementById('cartDiscount');
+    const discountRow = document.getElementById('discountRow');
+    const cartCountSpan = document.getElementById('cartCount');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+    
+    cartCountSpan.textContent = cart.length;
+    
+    if (cart.length === 0) {
+        cartItemsDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 40px 20px;"><div style="font-size: 48px; margin-bottom: 10px;">🛒</div><p>Your cart is empty</p><small>Search and add products to get started</small></div>';
+        cartTotalSpan.textContent = '৳0.00';
+        cartSubtotalSpan.textContent = '৳0.00';
+        cartDiscountSpan.textContent = '-৳0.00';
+        discountRow.style.display = 'none';
+        checkoutBtn.disabled = true;
+        clearBtn.disabled = true;
+        return;
+    }
+    
+    checkoutBtn.disabled = false;
+    clearBtn.disabled = false;
+    
+    let html = '';
+    let subtotal = 0;
+    
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        
+        html += `<div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+                   <div style="display: flex; justify-content: space-between; align-items: center;">
+                     <div>
+                       <strong>${item.name}</strong><br>
+                       <small>৳${item.price.toFixed(2)} each</small>
+                     </div>
+                     <button onclick="removeFromCart(${item.id})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 3px 6px; cursor: pointer;">×</button>
+                   </div>
+                   <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                     <div>
+                       <input type="number" value="${item.quantity}" min="1" max="${item.maxStock}" 
+                              onchange="updateCartQuantity(${item.id}, this.value)" 
+                              style="width: 50px; padding: 2px;">
+                     </div>
+                     <div style="font-weight: bold;">৳${itemTotal.toFixed(2)}</div>
+                   </div>
+                 </div>`;
+    });
+    
+    const discountAmount = (subtotal * discountPercent) / 100;
+    const total = subtotal - discountAmount;
+    
+    cartItemsDiv.innerHTML = html;
+    cartSubtotalSpan.textContent = `৳${subtotal.toFixed(2)}`;
+    
+    if (discountPercent > 0) {
+        cartDiscountSpan.textContent = `-৳${discountAmount.toFixed(2)}`;
+        discountRow.style.display = 'flex';
+    } else {
+        discountRow.style.display = 'none';
+    }
+    
+    cartTotalSpan.textContent = `৳${total.toFixed(2)}`;
+    checkoutBtn.disabled = false;
+}
+
+// Process checkout
+function processCheckout() {
+    if (cart.length === 0) return;
+    
+    const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/salesman/make_sale';
+    
+    cart.forEach(item => {
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'hidden';
+        qtyInput.name = `qty_${item.id}`;
+        qtyInput.value = item.quantity;
+        form.appendChild(qtyInput);
+        
+        // Apply discount to individual item price
+        const discountedPrice = item.price * (1 - discountPercent / 100);
+        const priceInput = document.createElement('input');
+        priceInput.type = 'hidden';
+        priceInput.name = `price_${item.id}`;
+        priceInput.value = discountedPrice.toFixed(2);
+        form.appendChild(priceInput);
+    });
+    
+    // Add discount info
+    const discountInput = document.createElement('input');
+    discountInput.type = 'hidden';
+    discountInput.name = 'discount_percent';
+    discountInput.value = discountPercent;
+    form.appendChild(discountInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}
